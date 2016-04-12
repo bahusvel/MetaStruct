@@ -25,7 +25,7 @@ Each struct is encoded field by field without any field tags, type tags or any o
 - dynamic length arrays of all of the above
 - nested structs
 - Enums (as int32)
-Cyclical structs are not allowed
+- Cyclical structs are not allowed
 
 # Extensibility
 Order of elements in the struct matters, elements that are appended to the existing struct at the end is the only form of extension for MetaStructs, allowing older message formats to remain backwards compatible:
