@@ -1,8 +1,13 @@
 struct TestMessage {
-    int32   id
-    string  message
+    int32   id // more comments
+    string  message // this is a comment
 }
-
+//another comment in the middle
 struct AnotherMessage {
+    TestMessage something
+    /*
+    This is a typical C Multiline comment
+    Another line of the same comment
+    */
 
 }
