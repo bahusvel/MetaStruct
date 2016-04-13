@@ -5,6 +5,7 @@ struct TestMessage {
 //another comment in the middle
 struct AnotherMessage {
     TestMessage something
+    []int32     numbers
     /*
     This is a typical C Multiline comment
     Another line of the same comment

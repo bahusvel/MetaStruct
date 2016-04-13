@@ -6,6 +6,18 @@ class FieldLex:
 	PRIMITIVE_TYPES = ["float", "double", "byte", "int32", "uint32", "int64", "uint64", "bool", "string"]
 
 	@staticmethod
+	def is_primitive(type):
+		return type in FieldLex.PRIMITIVE_TYPES
+
+	@staticmethod
+	def is_array(type):
+		return type.startswith("[]")
+
+	@staticmethod
+	def is_struct(type):
+		return (not FieldLex.is_primitive(type)) and (not FieldLex.is_array(type))
+
+	@staticmethod
 	def line_to_lex(line):
 		processed = line.strip().split(" ")
 		type = processed[0]
@@ -20,9 +32,9 @@ class FieldLex:
 
 	@staticmethod
 	def validate_type(type, struct_types):
-		if type in FieldLex.PRIMITIVE_TYPES:
+		if FieldLex.is_primitive(type):
 			return True
-		if type.startswith("[]"):
+		if FieldLex.is_array(type):
 			return FieldLex.validate_type(type[2:], struct_types)
 		if type in struct_types:
 			return True
@@ -103,13 +115,16 @@ def validate(structs):
 		struct.validate(all_struct_types)
 
 
-def compile_file(file_path):
+def compile_file(file_path, grammar):
 	file_lines = []
 	with open(file_path, 'r') as structfile:
 		file_lines = structfile.readlines()
 	structs = parse(file_lines)
 	print(structs)
 	validate(structs)
+	for struct in structs:
+		grammar.compile_struct(struct, structfile)
 
-
-compile_file("test.struct")
+if __name__ == "__main__":
+	from grammars.python3 import PythonGrammar
+	compile_file("test.struct", PythonGrammar("./"))
