@@ -5,24 +5,61 @@ import os
 encode_decode_lib = """
 import struct
 
+def encode_float(input):
+	return struct.pack(">f", input)
+	
+def encode_double(input):
+	return struct.pack(">d", input)
+	
+def encode_int32(input):
+	return struct.pack(">i", input)
+	
+def encode_uint32(input):
+	return struct.pack(">I", input)
+	
+def encode_int64(input):
+	return struct.pack(">l", input)
+	
+def encode_uint64(input):
+	return struct.pack(">L", input)
+
+def encode_bool(input):
+	return struct.pack(">B", 1 if input else 0)
+
+def encode_string(input):
+	bytes = input.encode("utf-8")
+	return encode_uint32(len(bytes)) + bytes
+
+def encode_array(input, element_callback):
+	total_bytes = b""
+	for element in input:
+		total_bytes += element_callback(element)
+	return encode_uint32(len(total_bytes)) + total_bytes
+
 def decode_float(bytes):
-	return 0.0, bytes
+	return struct.unpack_from(">f", bytes)[0], bytes[4:]
 	
 def decode_double(bytes):
-	return 0.0, bytes
+	return struct.unpack_from(">d", bytes)[0], bytes[8:]
 	
 def decode_int32(bytes):
-	return 0, bytes
+	return struct.unpack_from(">i", bytes)[0], bytes[4:]
 	
 def decode_uint32(bytes):
-	return 0, bytes
+	return struct.unpack_from(">I", bytes)[0], bytes[4:]
 	
 def decode_int64(bytes):
-	return 0, bytes
+	return struct.unpack_from(">l", bytes)[0], bytes[8:]
 	
 def decode_uint64(bytes):
-	return 0, bytes
-	
+	return struct.unpack_from(">L", bytes)[0], bytes[8:]
+
+def decode_bool(bytes):
+	return struct.unpack_from(">B", bytes)[0] != 0, bytes[1:]
+
+def decode_string(bytes):
+	string_length, bytes = decode_uint32(bytes)
+	return bytes[:string_length].decode("utf-8"), bytes[string_length:]
 
 def decode_array(bytes, element_callback):
 	temporary_array = []
@@ -50,10 +87,10 @@ class {struct_name}:
 field_init = "self.{field_name} = None"
 
 simple_field_encode = "buffer += libmstruct.encode_{field_type}(self.{field_name})"
-array_field_encode = "buffer += libmstruct.encode_array(\"{field_type}\", self.{field_name})"
+array_field_encode = "buffer += libmstruct.encode_array(self.{field_name}, lambda element: {element_callback})"
 struct_field_encode = "buffer += self.{field_name}.encode()"
 simple_field_decode = "instance.{field_name}, buffer = libmstruct.decode_{field_type}(buffer)"
-array_field_decode = "instance.{field_name}, buffer = libmstruct.decode_array(\"{field_type}\", buffer)"
+array_field_decode = "instance.{field_name}, buffer = libmstruct.decode_array(buffer, lambda buffer: {element_callback})"
 struct_field_decode = "instance.{field_name}, buffer = {field_type}.decode(buffer)"
 
 encode_func = """
