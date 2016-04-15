@@ -3,9 +3,35 @@ from compiler.grammar import AbstractGrammar
 import os
 
 encode_decode_lib = """
-def test():
-	print("whatever")
+import struct
 
+def decode_float(bytes):
+	return 0.0, bytes
+	
+def decode_double(bytes):
+	return 0.0, bytes
+	
+def decode_int32(bytes):
+	return 0, bytes
+	
+def decode_uint32(bytes):
+	return 0, bytes
+	
+def decode_int64(bytes):
+	return 0, bytes
+	
+def decode_uint64(bytes):
+	return 0, bytes
+	
+
+def decode_array(bytes, element_callback):
+	temporary_array = []
+	array_length, bytes = decode_uint32(bytes)
+	original_length = len(bytes)
+	while original_length - array_length < len(bytes) != 0:
+		element, bytes = element_callback(bytes)
+		temporary_array.append(element)
+	return bytes
 """
 
 package_template = "import libmstruct\n"
