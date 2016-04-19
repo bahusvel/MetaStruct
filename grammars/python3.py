@@ -1,6 +1,5 @@
 from compiler.ms_compiler import StructLex, FieldLex
 from compiler.grammar import AbstractGrammar
-import os
 
 encodes = {
 	'float': 	'{output} += struct.pack(">f", {input})',
