@@ -126,5 +126,5 @@ def compile_file(file_path, grammar):
 		grammar.compile_struct(struct, structfile)
 
 if __name__ == "__main__":
-	from grammars.python3 import PythonGrammar
-	compile_file("../test.struct", PythonGrammar("./"))
+	from grammars.c import CGRammar
+	compile_file("../test.struct", CGRammar("./"))
