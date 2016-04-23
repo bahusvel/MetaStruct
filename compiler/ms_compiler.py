@@ -1,5 +1,5 @@
 import re
-
+import os
 
 class FieldLex:
 
@@ -115,16 +115,27 @@ def validate(structs):
 		struct.validate(all_struct_types)
 
 
-def compile_file(file_path, grammar):
+def getPackageName(file_path):
+	basename = os.path.basename(file_path)
+	return os.path.splitext(basename)[0]
+
+
+def compile_file(file_path, grammar, output_dir=None):
+	file_path = os.path.abspath(file_path)
+	if output_dir is None:
+		output_dir = os.path.dirname(file_path)
 	file_lines = []
 	with open(file_path, 'r') as structfile:
 		file_lines = structfile.readlines()
 	structs = parse(file_lines)
 	print(structs)
 	validate(structs)
-	for struct in structs:
-		grammar.compile_struct(struct, structfile)
+	files = grammar.compile_package(structs, getPackageName(file_path))
+	for file in files:
+		gen_file_path = output_dir + "/" + file
+		with open(gen_file_path, 'w') as gen_file:
+			gen_file.write(files[file])
 
 if __name__ == "__main__":
-	from grammars.c import CGRammar
-	compile_file("../test.struct", CGRammar("./"))
+	from grammars.python3 import PythonGrammar
+	compile_file("../first.struct", PythonGrammar())

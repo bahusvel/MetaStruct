@@ -23,28 +23,28 @@ def encode_array(type):
 		raise Exception("Nested arrays are not yet supported")
 	elif FieldLex.is_struct(real_type):
 		array_string += encodes["struct"].format(output="tmp_buffer", input="element")
-	array_string += "\n" + encodes["uint32"].format(output="{output}", input="len(tmp_buffer")
+	array_string += "\n" + encodes["uint32"].format(output="{output}", input="len(tmp_buffer)")
 	array_string += "\n{output} += tmp_buffer"
 	return array_string
 
 decodes = {
-	'float': 	'{output} = struct.unpack_from(">f", bytes, offset={offset})[0]\n{offset} += 4',
-	'double': 	'{output} = struct.unpack_from(">d", bytes, offset={offset})[0]\n{offset} += 8',
-	'int32': 	'{output} = struct.unpack_from(">i", bytes, offset={offset})[0]\n{offset} += 4',
-	'uint32': 	'{output} = struct.unpack_from(">I", bytes, offset={offset})[0]\n{offset} += 4',
-	'int64': 	'{output} = struct.unpack_from(">l", bytes, offset={offset})[0]\n{offset} += 8',
-	'uint64': 	'{output} = struct.unpack_from(">L", bytes, offset={offset})[0]\n{offset} += 8',
-	'bool': 	'{output} = struct.unpack_from(">B", bytes)[0] != 0\n{offset} += 8',
-	'struct':	'{output}, {offset} = {field_type}.decode(bytes, offset={offset})'
+	'float': 	'{output} = struct.unpack_from(">f", buffer, offset={offset})[0]\n{offset} += 4',
+	'double': 	'{output} = struct.unpack_from(">d", buffer, offset={offset})[0]\n{offset} += 8',
+	'int32': 	'{output} = struct.unpack_from(">i", buffer, offset={offset})[0]\n{offset} += 4',
+	'uint32': 	'{output} = struct.unpack_from(">I", buffer, offset={offset})[0]\n{offset} += 4',
+	'int64': 	'{output} = struct.unpack_from(">l", buffer, offset={offset})[0]\n{offset} += 8',
+	'uint64': 	'{output} = struct.unpack_from(">L", buffer, offset={offset})[0]\n{offset} += 8',
+	'bool': 	'{output} = struct.unpack_from(">B", buffer)[0] != 0\n{offset} += 8',
+	'struct':	'{output}, {offset} = {field_type}.decode(buffer, offset={offset})'
 }
-decodes['string'] = decodes['uint32'].format(output="string_length", offset="{offset}") + '\n{output} = bytes[{offset}:string_length].decode("utf-8")\n{offset} += string_length'
+decodes['string'] = decodes['uint32'].format(output="string_length", offset="{offset}") + '\n{output} = buffer[{offset}:string_length].decode("utf-8")\n{offset} += string_length'
 
 
 def decode_array(type):
 	real_type = type[2:]
 	array_string = 'temporary_array = []\n'
 	array_string += decodes['uint32'].format(output="array_length", offset="{offset}")
-	array_string += '\noriginal_offset = {offset}\nwhile (original_offset + array_length) > {offset}\n\t'
+	array_string += '\noriginal_offset = {offset}\nwhile (original_offset + array_length) > {offset}:\n\t'
 	if FieldLex.is_primitive(real_type):
 		array_string += re_indent(decodes[real_type].format(output="element", offset="{offset}"), ntabs=1)
 	elif FieldLex.is_array(real_type):
@@ -54,7 +54,7 @@ def decode_array(type):
 	array_string += 'temporary_array.append(element)\n{output} = temporary_array'
 	return array_string
 
-package_template = "import struct\n"
+package_template = "import struct\n\n"
 
 struct_template = """
 class {struct_name}:
@@ -62,15 +62,18 @@ class {struct_name}:
 	def encode(self):
 		buffer = b""
 		{encode_fields}
-		return buffer
+		buf_length = struct.pack(">I", len(buffer))
+		return buf_length + buffer
 
 	@staticmethod
 	def decode(buffer, offset=0):
 		instance = {struct_name}()
+		struct_length = struct.unpack_from(">I", buffer, offset=offset)[0]
+		offset += 4
 		{decode_fields}
 		return instance, offset
 
-	def __init__():
+	def __init__(self):
 		{init_fields}
 """
 
@@ -127,8 +130,15 @@ class PythonGrammar(AbstractGrammar):
 
 		struct_string = struct_template.format(struct_name=struct_lex.name, init_fields=fields_string,
 		                                       encode_fields=encode_fields, decode_fields=decode_fields)
-		print(struct_string)
+		return struct_string
 
-	def __init__(self, output_directory):
-		super().__init__(output_directory)
-		self.output_source_library()
+	def compile_package(self, struct_lexes, package_name):
+		files = {}
+		fname = package_name+".py"
+		files[fname] = package_template
+		for struct_lex in struct_lexes:
+			files[fname] += self.compile_struct(struct_lex, package_name)
+		return files
+
+	def __init__(self):
+		super().__init__()
