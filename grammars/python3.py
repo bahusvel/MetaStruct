@@ -37,7 +37,7 @@ decodes = {
 	'bool': 	'{output} = struct.unpack_from(">B", buffer)[0] != 0\n{offset} += 8',
 	'struct':	'{output}, {offset} = {field_type}.decode(buffer, offset={offset})'
 }
-decodes['string'] = decodes['uint32'].format(output="string_length", offset="{offset}") + '\n{output} = buffer[{offset}:string_length].decode("utf-8")\n{offset} += string_length'
+decodes['string'] = decodes['uint32'].format(output="string_length", offset="{offset}") + '\n{output} = buffer[{offset}:{offset}+string_length].decode("utf-8")\n{offset} += string_length'
 
 
 def decode_array(type):
