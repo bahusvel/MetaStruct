@@ -1,3 +1,5 @@
+size_hint = 1024
+
 struct TestMessage {
     int32   id // more comments
     string  message // this is a comment

@@ -1,6 +1,7 @@
 import re
 import os
 
+
 class FieldLex:
 
 	PRIMITIVE_TYPES = ["float", "double", "byte", "int32", "uint32", "int64", "uint64", "bool", "string"]
@@ -52,14 +53,13 @@ class FieldLex:
 class StructLex:
 
 	@staticmethod
-	def lines_to_lex(line_number, all_lines):
-		struct_lines = None
-		for elnumber, eline in enumerate(all_lines[line_number:]):
+	def lines_to_lex(struct_lines):
+		for elnumber, eline in enumerate(struct_lines):
 			if "}" in eline:
-				struct_lines = all_lines[line_number:line_number + elnumber+1]
+				struct_lines = struct_lines[:elnumber+1]
 				break
 		if struct_lines is None:
-			raise Exception("Invalid Struct Declaration: " + all_lines[line_number])
+			raise Exception("Invalid Struct Declaration: " + struct_lines[0])
 
 		header = struct_lines[0]
 		spos = header.find("struct ")
@@ -94,19 +94,36 @@ class StructLex:
 		self.field_lexes = field_lexes
 
 
+class OptionLex:
+
+	@staticmethod
+	def line_to_lex(line):
+		parts = line.strip().partition("=")
+		return OptionLex(parts[0].strip(), parts[2].strip())
+
+	def __init__(self, name, value):
+		super().__init__()
+		self.name = name, value
+
+
 def parse(file_lines):
 	# remove comments
 	line_string = "".join(file_lines)
 	line_string = re.sub("//.*", "", line_string)
 	line_string = re.sub("/\*.*\*/", "", line_string, flags=re.M | re.S)
-	# remove empties
-	file_lines = list(filter(lambda line: line != "" and line != "\n", line_string.splitlines()))
+	# better one shot parser
+	static_strcuts = re.findall("struct.*?}", line_string, flags=re.M | re.S)
+	line_string = re.sub("struct.*?}", "", line_string, flags=re.M | re.S)
+	global_options = re.findall(".+?=.+?", line_string)
+	print(static_strcuts)
 	# parse out structs
 	structs = []
-	for lnumber, line in enumerate(file_lines):
-		if line.strip().startswith("struct"):
-			structs.append(StructLex.lines_to_lex(lnumber, file_lines))
-	return structs
+	options = []
+	for struct_lines in static_strcuts:
+		structs.append(StructLex.lines_to_lex(struct_lines.splitlines()))
+	for option_lines in global_options:
+		options.append(OptionLex.line_to_lex(option_lines))
+	return structs, options
 
 
 def validate(structs):
@@ -127,7 +144,7 @@ def compile_file(file_path, grammar, output_dir=None):
 	file_lines = []
 	with open(file_path, 'r') as structfile:
 		file_lines = structfile.readlines()
-	structs = parse(file_lines)
+	structs, global_options = parse(file_lines)
 	print(structs)
 	validate(structs)
 	files = grammar.compile_package(structs, getPackageName(file_path))
